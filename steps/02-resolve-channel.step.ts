@@ -1,4 +1,4 @@
-import { EventConfig, Handlers } from "motia";
+import { EventConfig, EventHandler, Handlers } from "motia";
 import { z } from "zod";
 
 export const config: EventConfig = {
@@ -7,13 +7,16 @@ export const config: EventConfig = {
     subscribes: ["yt.submit"],
     emits: ["yt.channel.resolved", "yt.channel.error"],
     input: z.object({
+        jobId: z.string(),
         email: z.string().email("Invalid Email Address"),
         channel: z.string(),
-        jobId: z.string().optional(),
     }),
 };
 
-export const handler: Handlers["ResolveChannel"] = async (
+type inputType = { jobId: string; email: string; channel: string }
+type HandlerType = EventHandler<inputType, unknown>
+
+export const handler: HandlerType = async (
     input,
     { logger, state, emit }
 ) => {
@@ -47,8 +50,7 @@ export const handler: Handlers["ResolveChannel"] = async (
         if (channel.startsWith("@")) {
             const handle = channel.substring(1);
 
-            const channelsUrl = `${process.env.YOUTUBE_API
-                }/channel/${encodeURIComponent(handle)}`;
+            const channelsUrl = `${process.env.YOUTUBE_API}/channel/${encodeURIComponent(handle)}`;
 
             const channelsRes = await fetch(channelsUrl);
             const channelsData = await channelsRes.json();
@@ -67,10 +69,7 @@ export const handler: Handlers["ResolveChannel"] = async (
                 });
             }
         } else {
-            const channelsUrl = `${process.env.YOUTUBE_API
-                }/channel/${encodeURIComponent(channel)}`;
-
-            console.log(channelsUrl);
+            const channelsUrl = `${process.env.YOUTUBE_API}/channel/${encodeURIComponent(channel)}`;
 
             const channelsRes = await fetch(channelsUrl);
             const channelsData = await channelsRes.json();
@@ -107,6 +106,8 @@ export const handler: Handlers["ResolveChannel"] = async (
             data: {
                 jobId,
                 email,
+                channelName,
+                channelId,
             },
         });
     } catch (error: any) {
